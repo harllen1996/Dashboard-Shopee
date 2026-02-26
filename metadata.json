@@ -1,0 +1,5 @@
+{
+  "name": "Shopee RTS Control Tower",
+  "description": "Dashboard for monitoring Shopee Return to Sender (RTS) shipments.",
+  "requestFramePermissions": []
+}
