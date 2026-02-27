@@ -1,13 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ShipmentData } from '@/src/hooks/useGoogleSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/Card';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { useLanguage } from '../contexts/LanguageContext';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ExecutivaProps {
   data: ShipmentData[];
 }
 
 export function Executiva({ data }: ExecutivaProps) {
+  const { t } = useLanguage();
+  const [showAllSpxStatus, setShowAllSpxStatus] = useState(false);
+  
   // Computed Fields
   const totalShipments = data.length;
   const totalStuckOver5 = data.filter(d => d.days_stuck > 5).length;
@@ -51,12 +56,34 @@ export function Executiva({ data }: ExecutivaProps) {
       .slice(0, 10);
   }, [data]);
 
+  // Table Data: SPX Status
+  const spxStatusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let total = 0;
+    
+    data.forEach(d => {
+      const status = d.latest_spx_status || 'Sem Status';
+      counts[status] = (counts[status] || 0) + 1;
+      total++;
+    });
+
+    const sortedData = Object.entries(counts)
+      .map(([status, count]) => ({
+        status,
+        count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0.0%'
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return { sortedData, total };
+  }, [data]);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição RTS Aging</CardTitle>
+            <CardTitle>{t('exec.distRtsAging')}</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -83,7 +110,7 @@ export function Executiva({ data }: ExecutivaProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top 10 Estações Críticas (&gt;10 dias)</CardTitle>
+            <CardTitle>{t('exec.top10Critical')}</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -107,20 +134,120 @@ export function Executiva({ data }: ExecutivaProps) {
         <CardContent className="p-6">
           <div className="prose prose-slate max-w-none">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-              <span className="mr-2">📌</span> RESUMO EXECUTIVO
+              <span className="mr-2">📌</span> {t('exec.execSummary')}
             </h3>
             <ul className="space-y-2 text-slate-700 list-disc list-inside">
-              <li><strong>Base atual:</strong> {totalShipments.toLocaleString()} envios em aberto</li>
-              <li><strong>{percentStuck}%</strong> estão com mais de 5 dias de stuck</li>
-              <li><strong>{criticalShipments.toLocaleString()}</strong> casos ultrapassam 20 dias</li>
+              <li><strong>{t('exec.currentBase')}</strong> {totalShipments.toLocaleString()} {t('exec.openShipments')}</li>
+              <li><strong>{percentStuck}%</strong> {t('exec.stuckMoreThan5')}</li>
+              <li><strong>{criticalShipments.toLocaleString()}</strong> {t('exec.casesExceed20')}</li>
+              {spxStatusData.sortedData.length > 0 && (
+                <li>
+                  {t('exec.topSpxStatus')} <strong>{spxStatusData.sortedData[0].status}</strong>, {t('exec.representing')} <strong>{spxStatusData.sortedData[0].percentage}</strong> {t('exec.ofTotalVolume')}.
+                </li>
+              )}
             </ul>
             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 flex items-start">
               <span className="mr-2">⚠️</span>
-              <p className="m-0 font-medium">Recomenda-se ação imediata nas estações com média superior a 10 dias.</p>
+              <p className="m-0 font-medium">{t('exec.recommendation')}</p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* SPX Status Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('exec.spxStatusVol')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-slate-700">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-100 border-b-2 border-slate-300">
+                  <tr>
+                    <th className="px-4 py-2 italic font-semibold">latest_spx_status</th>
+                    <th className="px-4 py-2 text-right font-semibold">RTS Total Open</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllSpxStatus ? spxStatusData.sortedData : spxStatusData.sortedData.slice(0, 5)).map((row, i) => (
+                    <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-2">{row.status}</td>
+                      <td className="px-4 py-2 text-right">{row.count.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {spxStatusData.sortedData.length > 5 && (
+                    <tr>
+                      <td colSpan={2} className="px-4 py-2 text-center bg-slate-50 border-b border-slate-100">
+                        <button 
+                          onClick={() => setShowAllSpxStatus(!showAllSpxStatus)}
+                          className="text-[#EE4D2D] hover:text-[#D7263D] font-medium text-xs uppercase tracking-wider flex items-center justify-center w-full py-1"
+                        >
+                          {showAllSpxStatus ? (
+                            <><ChevronUp className="w-4 h-4 mr-1" /> {t('exec.showLess')}</>
+                          ) : (
+                            <><ChevronDown className="w-4 h-4 mr-1" /> {t('exec.showMore', { count: spxStatusData.sortedData.length - 5 })}</>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
+                    <td className="px-4 py-2">{t('exec.grandTotal')}</td>
+                    <td className="px-4 py-2 text-right">{spxStatusData.total.toLocaleString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('exec.spxStatusPct')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-slate-700">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-100 border-b-2 border-slate-300">
+                  <tr>
+                    <th className="px-4 py-2 italic font-semibold">latest_spx_status</th>
+                    <th className="px-4 py-2 text-right font-semibold">RTS Total Open</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllSpxStatus ? spxStatusData.sortedData : spxStatusData.sortedData.slice(0, 5)).map((row, i) => (
+                    <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-2">{row.status}</td>
+                      <td className="px-4 py-2 text-right">{row.percentage}</td>
+                    </tr>
+                  ))}
+                  {spxStatusData.sortedData.length > 5 && (
+                    <tr>
+                      <td colSpan={2} className="px-4 py-2 text-center bg-slate-50 border-b border-slate-100">
+                        <button 
+                          onClick={() => setShowAllSpxStatus(!showAllSpxStatus)}
+                          className="text-[#EE4D2D] hover:text-[#D7263D] font-medium text-xs uppercase tracking-wider flex items-center justify-center w-full py-1"
+                        >
+                          {showAllSpxStatus ? (
+                            <><ChevronUp className="w-4 h-4 mr-1" /> {t('exec.showLess')}</>
+                          ) : (
+                            <><ChevronDown className="w-4 h-4 mr-1" /> {t('exec.showMore', { count: spxStatusData.sortedData.length - 5 })}</>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
+                    <td className="px-4 py-2">{t('exec.grandTotal')}</td>
+                    <td className="px-4 py-2 text-right">100.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

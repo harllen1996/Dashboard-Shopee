@@ -6,12 +6,14 @@ import { format } from 'date-fns';
 import { Download, Filter, Search, X, ChevronDown, Check } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface RelatorioProps {
   data: ShipmentData[];
 }
 
 export function Relatorio({ data }: RelatorioProps) {
+  const { t } = useLanguage();
   const reportRef = useRef<HTMLDivElement>(null);
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,6 +143,28 @@ export function Relatorio({ data }: RelatorioProps) {
                 'Atraso no processo/disputa'
       }))
       .sort((a, b) => Number(b.avgAging) - Number(a.avgAging));
+  }, [filteredData]);
+
+  // Group by SPX Status
+  const spxStatusStats = useMemo(() => {
+    const stats: Record<string, { count: number, percentage: string }> = {};
+    let total = 0;
+    
+    filteredData.forEach(item => {
+      const status = item.latest_spx_status || 'Sem Status';
+      stats[status] = stats[status] || { count: 0, percentage: '0%' };
+      stats[status].count += 1;
+      total++;
+    });
+
+    return Object.entries(stats)
+      .map(([name, data]) => ({
+        name,
+        count: data.count,
+        percentage: total > 0 ? ((data.count / total) * 100).toFixed(1) + '%' : '0.0%'
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
   }, [filteredData]);
 
   const handleExportPDF = async () => {
@@ -410,8 +434,45 @@ export function Relatorio({ data }: RelatorioProps) {
 
               <div className="bg-slate-50 border-l-4 border-slate-800 p-4 mt-4">
                 <p className="text-sm text-slate-700 italic">
-                  <strong>Observação de Engenharia:</strong> Um aging superior a 30 dias em grande parte da amostra indica que estes itens podem ter sofrido sinistros não baixados no sistema ou estão em "limbo" administrativo entre as transferências de custódia.
+                  <strong>{t('rel.engObs')}</strong> {t('rel.engObsDesc')}
                 </p>
+              </div>
+
+              <div className="space-y-3 mt-8">
+                <h3 className="font-bold text-slate-800">{t('rel.analysisSpx')}</h3>
+                <p className="text-sm text-slate-700">
+                  {t('rel.analysisSpxDesc')}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border-collapse">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.spxStatus')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">Volume</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.spxPercentage')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spxStatusStats.length > 0 ? spxStatusStats.map((stat, idx) => (
+                        <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                          <td className="border border-slate-300 px-4 py-2">{stat.name}</td>
+                          <td className="border border-slate-300 px-4 py-2">{stat.count}</td>
+                          <td className="border border-slate-300 px-4 py-2 font-mono">{stat.percentage}</td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan={3} className="border border-slate-300 px-4 py-4 text-center text-slate-500">Sem dados para exibir</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {spxStatusStats.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mt-2">
+                    <p className="text-sm text-amber-800">
+                      <span className="mr-2">💡</span>
+                      {t('rel.spxInsight', { status: spxStatusStats[0].name, percentage: spxStatusStats[0].percentage })}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 

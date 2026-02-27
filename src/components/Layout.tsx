@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, PieChart, FileText, Menu, X } from 'lucide-react';
+import { LayoutDashboard, PieChart, FileText, Menu, X, Globe } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Button } from './ui/Button';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,11 +12,12 @@ interface LayoutProps {
 
 export function Layout({ children, activeTab, setActiveTab }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t, language, setLanguage } = useLanguage();
 
   const navItems = [
-    { id: 'operacional', label: 'Operacional', icon: LayoutDashboard },
-    { id: 'executiva', label: 'Executiva', icon: PieChart },
-    { id: 'relatorio', label: 'Relatório Automático', icon: FileText },
+    { id: 'operacional', label: t('app.tab.operacional'), icon: LayoutDashboard },
+    { id: 'executiva', label: t('app.tab.executiva'), icon: PieChart },
+    { id: 'relatorio', label: t('app.tab.relatorio'), icon: FileText },
   ];
 
   return (
@@ -35,7 +37,7 @@ export function Layout({ children, activeTab, setActiveTab }: LayoutProps) {
       )}>
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center px-6 border-b border-slate-200">
-            <h1 className="text-xl font-bold text-[#EE4D2D]">Shopee RTS</h1>
+            <h1 className="text-xl font-bold text-[#EE4D2D]">{t('app.title')}</h1>
             <button 
               className="ml-auto lg:hidden"
               onClick={() => setSidebarOpen(false)}
@@ -72,16 +74,27 @@ export function Layout({ children, activeTab, setActiveTab }: LayoutProps) {
 
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 lg:px-8">
-          <button
-            className="mr-4 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6 text-slate-500" />
-          </button>
-          <h2 className="text-lg font-semibold text-slate-900">
-            {navItems.find(i => i.id === activeTab)?.label}
-          </h2>
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 lg:px-8 justify-between">
+          <div className="flex items-center">
+            <button
+              className="mr-4 lg:hidden"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-6 w-6 text-slate-500" />
+            </button>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {navItems.find(i => i.id === activeTab)?.label}
+            </h2>
+          </div>
+          <div className="flex items-center">
+            <button
+              onClick={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
+              className="flex items-center px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              {language === 'pt' ? 'EN' : 'PT'}
+            </button>
+          </div>
         </header>
         <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           {children}
