@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, PieChart, FileText, Menu, X, Globe } from 'lucide-react';
+import { LayoutDashboard, PieChart, FileText, Menu, X, Globe, BarChart2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Button } from './ui/Button';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -18,6 +18,7 @@ export function Layout({ children, activeTab, setActiveTab }: LayoutProps) {
     { id: 'operacional', label: t('app.tab.operacional'), icon: LayoutDashboard },
     { id: 'executiva', label: t('app.tab.executiva'), icon: PieChart },
     { id: 'relatorio', label: t('app.tab.relatorio'), icon: FileText },
+    { id: 'produtividade', label: t('app.tab.produtividade'), icon: BarChart2 },
   ];
 
   return (

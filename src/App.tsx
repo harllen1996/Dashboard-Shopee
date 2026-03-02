@@ -3,13 +3,14 @@ import { Layout } from './components/Layout';
 import { Operacional } from './pages/Operacional';
 import { Executiva } from './pages/Executiva';
 import { Relatorio } from './pages/Relatorio';
+import { Produtividade } from './pages/Produtividade';
 import { useGoogleSheet } from './hooks/useGoogleSheet';
-import { AlertCircle, Loader2, Upload } from 'lucide-react';
+import { AlertCircle, Loader2, Upload, Sparkles } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('operacional');
-  const { data, loading, error, refetch, handleFileUpload } = useGoogleSheet();
+  const { data, loading, error, refetch, handleFileUpload, loadDemoData } = useGoogleSheet();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
 
@@ -59,13 +60,23 @@ export default function App() {
                   ref={fileInputRef}
                   onChange={onFileChange}
                 />
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center px-4 py-2.5 bg-slate-800 text-white font-medium rounded-md hover:bg-slate-900 transition-colors shadow-sm"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {t('app.uploadCsv')}
-                </button>
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center px-4 py-2.5 bg-slate-800 text-white font-medium rounded-md hover:bg-slate-900 transition-colors shadow-sm"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {t('app.uploadCsv')}
+                  </button>
+                  
+                  <button 
+                    onClick={loadDemoData}
+                    className="w-full flex items-center justify-center px-4 py-2.5 bg-white border border-slate-300 text-slate-700 font-medium rounded-md hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2 text-indigo-500" />
+                    {t('app.loadDemo')}
+                  </button>
+                </div>
               </div>
               
               <div className="relative">
@@ -97,6 +108,7 @@ export default function App() {
       {activeTab === 'operacional' && <Operacional data={data} />}
       {activeTab === 'executiva' && <Executiva data={data} />}
       {activeTab === 'relatorio' && <Relatorio data={data} />}
+      {activeTab === 'produtividade' && <Produtividade data={data} />}
     </Layout>
   );
 }
