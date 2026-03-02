@@ -22,7 +22,7 @@ export interface ShipmentData {
 
 const SHEET_ID = '1WUPEzSJqMfNsNzDOPjtw3xAru572e0K7jFzPuZLp3no';
 const TAB_NAME = 'RTS Total Open';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
+const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSPOlbJ9L5HXNsRplB_YsGh8iuLoOCD8YLOuJh15M1Dlw8PMIACOVranVzDbV6jqspw0FLS4m8QXMTY/pub?output=csv`;
 
 const extractSpxStatus = (row: any) => {
   if (row.lastest_spx_status) return row.lastest_spx_status;

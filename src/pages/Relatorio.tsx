@@ -203,7 +203,7 @@ export function Relatorio({ data }: RelatorioProps) {
             <div className="space-y-3 flex-1 max-w-xl" ref={dropdownRef}>
               <h3 className="text-sm font-medium text-slate-700 flex items-center">
                 <Filter className="w-4 h-4 mr-2" />
-                Filtrar por Tipo de Operação
+                {t('rel.filterOpType')}
               </h3>
               
               <div className="relative">
@@ -236,7 +236,7 @@ export function Relatorio({ data }: RelatorioProps) {
                     <input
                       type="text"
                       className="w-full bg-transparent border-none focus:outline-none text-sm text-slate-700 placeholder:text-slate-400"
-                      placeholder={selectedStations.length === 0 ? "Buscar operação (ex: SOC, HUB)..." : ""}
+                      placeholder={selectedStations.length === 0 ? t('rel.searchOp') : ""}
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -315,13 +315,13 @@ export function Relatorio({ data }: RelatorioProps) {
               </div>
               
               <p className="text-xs text-slate-500">
-                {selectedStations.length === 0 ? 'Exibindo todas as operações.' : `${selectedStations.length} estação(ões) selecionada(s).`}
+                {selectedStations.length === 0 ? t('rel.showingAll') : t('rel.stationsSelected', { count: selectedStations.length })}
               </p>
             </div>
             
             <Button onClick={handleExportPDF} className="bg-[#EE4D2D] hover:bg-[#D7263D] text-white whitespace-nowrap">
               <Download className="mr-2 h-4 w-4" />
-              Exportar PDF
+              {t('rel.exportPdf')}
             </Button>
           </div>
         </CardContent>
@@ -335,50 +335,50 @@ export function Relatorio({ data }: RelatorioProps) {
             {/* Header */}
             <div className="border-b-2 border-slate-800 pb-6 space-y-2">
               <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                <strong className="text-slate-900">PARA:</strong>
-                <span className="text-slate-700">Diretoria de Operações / Gerência de Supply Chain</span>
+                <strong className="text-slate-900">{t('rel.to')}</strong>
+                <span className="text-slate-700">{t('rel.toValue')}</span>
                 
-                <strong className="text-slate-900">DE:</strong>
-                <span className="text-slate-700">Engenharia de Inteligência de Logística Reversa</span>
+                <strong className="text-slate-900">{t('rel.from')}</strong>
+                <span className="text-slate-700">{t('rel.fromValue')}</span>
                 
-                <strong className="text-slate-900">ASSUNTO:</strong>
-                <span className="text-slate-900 font-bold uppercase">Relatório Estratégico de Performance e Recuperação de Ativos</span>
+                <strong className="text-slate-900">{t('rel.subject')}</strong>
+                <span className="text-slate-900 font-bold uppercase">{t('rel.subjectValue')}</span>
                 
-                <strong className="text-slate-900">DATA:</strong>
+                <strong className="text-slate-900">{t('rel.date')}</strong>
                 <span className="text-slate-700">{format(new Date(), 'dd/MM/yyyy')}</span>
               </div>
             </div>
 
             {/* 1. Resumo Executivo */}
             <section className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">1. Resumo Executivo</h2>
+              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">{t('rel.sec1')}</h2>
               <div className="space-y-4 text-slate-700 leading-relaxed text-justify">
                 <p>
-                  O cenário atual da operação de logística reversa {selectedStations.length > 0 ? `(foco em ${displayTags.map(t => t.label).join(', ')})` : ''} apresenta um estado que requer atenção imediata. Com um volume de <strong>{totalShipments.toLocaleString()} itens</strong> retidos no fluxo, a ineficiência operacional é evidenciada pelo Aging Médio que atingiu <strong>{avgAging} dias</strong> de retenção desde o RTS.
+                  {t('rel.p1_1')} {selectedStations.length > 0 ? t('rel.p1_focus', { tags: displayTags.map(t => t.label).join(', ') }) : ''} {t('rel.p1_2')} <strong>{totalShipments.toLocaleString()} {t('rel.p1_3')}</strong> {t('rel.p1_4')} <strong>{avgAging} {t('rel.p1_5')}</strong> {t('rel.p1_6')}
                 </p>
                 <p>
-                  A operação registra <strong>{percentOutOfSla}% de descumprimento de SLA</strong> (itens com mais de 30 dias), e a totalidade destes itens é classificada como Risco Alto. Estes dados indicam que os produtos estão, na prática, paralisados no fluxo ou retidos por questões burocráticas/processuais severas, resultando em depreciação do ativo e custo de oportunidade elevado para a companhia.
+                  {t('rel.p2_1')} <strong>{percentOutOfSla}{t('rel.p2_2')}</strong> {t('rel.p2_3')}
                 </p>
               </div>
             </section>
 
             {/* 2. Diagnóstico Técnico */}
             <section className="space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">2. Diagnóstico Técnico</h2>
+              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">{t('rel.sec2')}</h2>
               <p className="text-slate-700 leading-relaxed text-justify">
-                A análise detalhada aponta para gargalos específicos no processo macro de devolução. As tabelas abaixo detalham as localizações mais críticas e os responsáveis com maior tempo de retenção.
+                {t('rel.sec2_desc')}
               </p>
 
               <div className="space-y-3">
-                <h3 className="font-bold text-slate-800">Análise por Localização (Gargalos Regionais - Top 5)</h3>
+                <h3 className="font-bold text-slate-800">{t('rel.analysisLoc')}</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-100 text-slate-700">
                       <tr>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Localização</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Volume (Itens)</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Aging Médio (Dias)</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Status de Criticidade</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.location')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.volItems')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.avgAgingDays')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.critStatus')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -389,12 +389,12 @@ export function Relatorio({ data }: RelatorioProps) {
                           <td className="border border-slate-300 px-4 py-2 font-mono">{stat.avgAging}</td>
                           <td className="border border-slate-300 px-4 py-2">
                             <span className={`font-semibold ${stat.status === 'Crítico' ? 'text-red-600' : 'text-amber-600'}`}>
-                              {stat.status}
+                              {stat.status === 'Crítico' ? t('rel.critical') : t('rel.warning')}
                             </span>
                           </td>
                         </tr>
                       )) : (
-                        <tr><td colSpan={4} className="border border-slate-300 px-4 py-4 text-center text-slate-500">Sem dados para exibir</td></tr>
+                        <tr><td colSpan={4} className="border border-slate-300 px-4 py-4 text-center text-slate-500">{t('rel.noData')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -402,18 +402,18 @@ export function Relatorio({ data }: RelatorioProps) {
               </div>
 
               <div className="space-y-3">
-                <h3 className="font-bold text-slate-800">Análise por Responsabilidade</h3>
+                <h3 className="font-bold text-slate-800">{t('rel.analysisResp')}</h3>
                 <p className="text-sm text-slate-700">
-                  A responsabilidade está distribuída, mas os seguintes setores detêm os maiores tempos de retenção, indicando falhas na última milha da reversa e na triagem de entrada.
+                  {t('rel.analysisRespDesc')}
                 </p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-slate-100 text-slate-700">
                       <tr>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Responsável</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Volume</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Aging Médio (Dias)</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Impacto no Processo</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.responsible')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.volume')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.avgAgingDays')}</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.processImpact')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -422,10 +422,14 @@ export function Relatorio({ data }: RelatorioProps) {
                           <td className="border border-slate-300 px-4 py-2">{stat.name}</td>
                           <td className="border border-slate-300 px-4 py-2">{stat.count}</td>
                           <td className="border border-slate-300 px-4 py-2 font-mono">{stat.avgAging}</td>
-                          <td className="border border-slate-300 px-4 py-2 text-slate-600">{stat.impact}</td>
+                          <td className="border border-slate-300 px-4 py-2 text-slate-600">
+                            {stat.impact === 'Falha na coleta/devolução física' ? t('rel.impact1') : 
+                             stat.impact === 'Falha na conferência/inventário' ? t('rel.impact2') : 
+                             t('rel.impact3')}
+                          </td>
                         </tr>
                       )) : (
-                        <tr><td colSpan={4} className="border border-slate-300 px-4 py-4 text-center text-slate-500">Sem dados para exibir</td></tr>
+                        <tr><td colSpan={4} className="border border-slate-300 px-4 py-4 text-center text-slate-500">{t('rel.noData')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -448,7 +452,7 @@ export function Relatorio({ data }: RelatorioProps) {
                     <thead className="bg-slate-100 text-slate-700">
                       <tr>
                         <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.spxStatus')}</th>
-                        <th className="border border-slate-300 px-4 py-2 font-semibold">Volume</th>
+                        <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.volume')}</th>
                         <th className="border border-slate-300 px-4 py-2 font-semibold">{t('rel.spxPercentage')}</th>
                       </tr>
                     </thead>
@@ -460,7 +464,7 @@ export function Relatorio({ data }: RelatorioProps) {
                           <td className="border border-slate-300 px-4 py-2 font-mono">{stat.percentage}</td>
                         </tr>
                       )) : (
-                        <tr><td colSpan={3} className="border border-slate-300 px-4 py-4 text-center text-slate-500">Sem dados para exibir</td></tr>
+                        <tr><td colSpan={3} className="border border-slate-300 px-4 py-4 text-center text-slate-500">{t('rel.noData')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -478,34 +482,34 @@ export function Relatorio({ data }: RelatorioProps) {
 
             {/* 3. Recomendações Práticas */}
             <section className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">3. Recomendações Práticas</h2>
+              <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">{t('rel.sec3')}</h2>
               <p className="text-slate-700 leading-relaxed text-justify">
-                Para reverter o quadro de estagnação e evitar o agravamento do prejuízo, as seguintes ações devem ser executadas imediatamente:
+                {t('rel.sec3_desc')}
               </p>
               <ul className="space-y-4 text-slate-700 list-none pl-0">
                 <li className="flex items-start">
                   <span className="font-bold text-[#EE4D2D] mr-2 mt-0.5">1.</span>
                   <div>
-                    <strong className="text-slate-900">Força-Tarefa de Saneamento (Write-off ou Recuperação):</strong> Devido ao aging elevado, a probabilidade de integridade física dos itens mais antigos é baixa. Recomendo a auditoria física imediata nas localidades mais críticas apontadas acima. Caso os itens não sejam localizados em 48h, proceder com o write-off (baixa contábil) e acionamento de seguro ou penalização dos responsáveis.
+                    <strong className="text-slate-900">{t('rel.rec1_title')}</strong> {t('rel.rec1_desc')}
                   </div>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold text-[#EE4D2D] mr-2 mt-0.5">2.</span>
                   <div>
-                    <strong className="text-slate-900">Revisão do Fluxo de Escalonamento:</strong> O fato de uma parcela significativa dos itens estar fora do SLA e ser de Risco Alto sem intervenção prévia demonstra falha nos alertas automáticos. É necessário implementar um Gatilho de Crise no ERP/WMS para casos que ultrapassem 30 dias de aging, com reporte direto à gerência.
+                    <strong className="text-slate-900">{t('rel.rec2_title')}</strong> {t('rel.rec2_desc')}
                   </div>
                 </li>
                 <li className="flex items-start">
                   <span className="font-bold text-[#EE4D2D] mr-2 mt-0.5">3.</span>
                   <div>
-                    <strong className="text-slate-900">Auditoria de Contratos e SLAs:</strong> É imperativo realizar uma revisão técnica nos contratos de transporte e operação logística para aplicar as cláusulas de penalidade por extravio ou atraso excessivo na logística reversa, visando recuperar o capital parado através de ressarcimento.
+                    <strong className="text-slate-900">{t('rel.rec3_title')}</strong> {t('rel.rec3_desc')}
                   </div>
                 </li>
               </ul>
             </section>
 
             <div className="pt-12 mt-8 border-t border-slate-200 text-center text-xs text-slate-400 uppercase tracking-widest">
-              Shopee Logistics Intelligence • Documento Confidencial
+              {t('rel.footer')}
             </div>
           </div>
         </CardContent>

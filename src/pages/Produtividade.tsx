@@ -1,22 +1,32 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { ShipmentData } from '@/src/hooks/useGoogleSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/Card';
 import { Select } from '@/src/components/ui/Select';
 import { Badge } from '@/src/components/ui/Badge';
+import { Button } from '@/src/components/ui/Button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { AlertTriangle, TrendingUp, TrendingDown, User, Clock, MessageSquare, Sparkles } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, User, Clock, MessageSquare, Sparkles, Upload } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ProdutividadeProps {
   data: ShipmentData[];
+  onFileUpload: (file: File) => void;
 }
 
-export function Produtividade({ data }: ProdutividadeProps) {
+export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
   const { t } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState({
     operator: '',
     classificacao_reason: '',
   });
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onFileUpload(file);
+    }
+  };
 
   // Filter data that actually has productivity info
   const productivityData = useMemo(() => {
@@ -123,15 +133,54 @@ export function Produtividade({ data }: ProdutividadeProps) {
 
   if (productivityData.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 space-y-4">
-        <Sparkles className="w-12 h-12 text-slate-300" />
-        <p className="text-lg font-medium">{t('prod.noData')}</p>
+      <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 space-y-6">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center space-y-4 max-w-md text-center">
+          <Upload className="w-12 h-12 text-[#EE4D2D]" />
+          <h2 className="text-xl font-bold text-slate-900">{t('prod.uploadCsv')}</h2>
+          <p className="text-sm text-slate-600">
+            {t('prod.uploadDesc')}
+          </p>
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={onFileChange}
+          />
+          <Button 
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-[#EE4D2D] hover:bg-[#D7263D] text-white"
+          >
+            {t('app.uploadCsv')}
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-slate-900">{t('app.tab.produtividade')}</h1>
+        <div className="flex space-x-2">
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={onFileChange}
+          />
+          <Button 
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-slate-600 border-slate-300"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {t('app.uploadCsv')}
+          </Button>
+        </div>
+      </div>
+
       {/* Alert Banner */}
       {bronzePercentage > 20 && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm animate-pulse">

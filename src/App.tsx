@@ -108,7 +108,7 @@ export default function App() {
       {activeTab === 'operacional' && <Operacional data={data} />}
       {activeTab === 'executiva' && <Executiva data={data} />}
       {activeTab === 'relatorio' && <Relatorio data={data} />}
-      {activeTab === 'produtividade' && <Produtividade data={data} />}
+      {activeTab === 'produtividade' && <Produtividade data={data} onFileUpload={handleFileUpload} />}
     </Layout>
   );
 }

@@ -43,6 +43,8 @@ const translations = {
     'prod.level': 'Nível',
     'prod.filterOperator': 'Filtrar Operador',
     'prod.filterReason': 'Filtrar Motivo',
+    'prod.uploadCsv': 'Upload de Arquivo de Produtividade',
+    'prod.uploadDesc': 'Selecione o arquivo CSV com os dados de BIPs por operador.',
 
     'op.station': 'Estação',
     'op.responsability': 'Responsável',
@@ -186,6 +188,8 @@ const translations = {
     'prod.level': 'Level',
     'prod.filterOperator': 'Filter Operator',
     'prod.filterReason': 'Filter Reason',
+    'prod.uploadCsv': 'Productivity File Upload',
+    'prod.uploadDesc': 'Select the CSV file with BIPs data per operator.',
 
     'op.station': 'Station',
     'op.responsability': 'Responsibility',
