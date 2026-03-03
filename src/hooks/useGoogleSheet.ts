@@ -12,10 +12,13 @@ export interface ShipmentData {
   since_drop_aging: string;
   in_station_aging: string;
   latest_spx_status: string;
+  latest_spx_datetime?: string;
+  current_datetime?: string;
   // Productivity fields
   operator?: string;
   qty_bips?: number;
   classificacao_reason?: string;
+  classificacao_processo?: string;
   hour?: string;
   date?: string;
 }
@@ -50,23 +53,64 @@ const extractSpxStatus = (row: any) => {
   return '';
 };
 
+const normalizeNumeric = (val: any) => {
+  if (val === undefined || val === null || val === '') return 0;
+  // Handle string with comma as decimal separator (e.g., "1,6")
+  if (typeof val === 'string') {
+    const normalized = val.replace(',', '.');
+    const num = Number(normalized);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+};
+
+const extractStationName = (row: any) => {
+  if (row.latest_station_name) return row.latest_station_name;
+  if (row.station_name) return row.station_name;
+  if (row.station) return row.station;
+  if (row.unidade) return row.unidade;
+  if (row.local) return row.local;
+  
+  const keys = Object.keys(row);
+  const normalizedKeys = keys.map(k => ({ 
+    original: k, 
+    normalized: k.toLowerCase().replace(/[^a-z0-9]/g, '') 
+  }));
+  
+  const possibleNames = ['lateststationname', 'stationname', 'station', 'unidade', 'local', 'operacao'];
+  for (const name of possibleNames) {
+    const match = normalizedKeys.find(k => k.normalized === name);
+    if (match && row[match.original]) return row[match.original];
+  }
+  return '';
+};
+
 const normalizeRow = (row: any) => {
+  // Map common variations for numeric fields
+  const daysInStation = row.days_open_in_station || row.days_in_station || row.aging_station || 0;
+  const daysSinceRts = row.days_open_since_rts || row.days_since_rts || row.aging_rts || 0;
+  const daysStuck = row.days_stuck || row.stuck_days || 0;
+
   return {
     shipment_id: row.shipment_id || '',
-    latest_station_name: row.latest_station_name || '',
+    latest_station_name: extractStationName(row),
     responsability: row.responsability || '',
-    days_open_in_station: Number(row.days_open_in_station) || 0,
-    days_open_since_rts: Number(row.days_open_since_rts) || 0,
-    days_stuck: Number(row.days_stuck) || 0,
+    days_open_in_station: normalizeNumeric(daysInStation),
+    days_open_since_rts: normalizeNumeric(daysSinceRts),
+    days_stuck: normalizeNumeric(daysStuck),
     stuck_aging: row.stuck_aging || '',
     since_drop_aging: row.since_drop_aging || '',
     in_station_aging: row.in_station_aging || '',
     latest_spx_status: extractSpxStatus(row),
+    latest_spx_datetime: row.latest_spx_datetime || row.lastest_spx_datetime || '',
+    current_datetime: row.current_datetime || '',
     // Productivity fields (mapping common variations)
     operator: row.operator || row.operador || row.user || '',
-    qty_bips: Number(row.qty_bips || row.bips || row.quantidade || 0),
+    qty_bips: normalizeNumeric(row.qty_bips || row.bips || row.quantidade),
     classificacao_reason: row.classificacao_reason || row.motivo || row.reason || '',
-    hour: row.hour || row.hora || row.horario || '',
+    classificacao_processo: row.classificacao_processo || row.processo || '',
+    hour: row.hour || row.hora || row.horario || row.faixa_horaria || '',
     date: row.date || row.data || '',
   };
 };
@@ -191,6 +235,7 @@ export function useGoogleSheet() {
       operator: ['João Silva', 'Maria Santos', 'Pedro Oliveira', 'Ana Costa', 'Lucas Lima'][Math.floor(Math.random() * 5)],
       qty_bips: Math.floor(Math.random() * 200) + 50,
       classificacao_reason: ['Avaria', 'Extravio', 'Endereço não localizado', 'Recusado'][Math.floor(Math.random() * 4)],
+      classificacao_processo: ['Recebimento', 'Conferência', 'Triagem', 'Expedição'][Math.floor(Math.random() * 4)],
       hour: `${Math.floor(Math.random() * 12) + 8}:00`,
       date: '2024-03-01'
     }));

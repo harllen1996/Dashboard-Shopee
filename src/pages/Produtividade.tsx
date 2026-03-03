@@ -21,6 +21,8 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     classificacao_reason: '',
   });
 
+  const COLORS = ["#EE4D2D", "#FF7A59", "#FFB199", "#FFD3C4", "#FFEDEB", "#0F172A", "#334155", "#64748B", "#94A3B8", "#CBD5E1"];
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -30,7 +32,13 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
 
   // Filter data that actually has productivity info
   const productivityData = useMemo(() => {
-    return data.filter(d => d.operator && d.qty_bips !== undefined && d.qty_bips > 0);
+    const excludedUsers = ['spx@shopee.com', 'system'];
+    return data.filter(d => 
+      d.operator && 
+      !excludedUsers.includes(d.operator.toLowerCase()) &&
+      d.qty_bips !== undefined && 
+      d.qty_bips > 0
+    );
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -55,10 +63,10 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     const totalBips = entries.reduce((acc, curr) => acc + curr.bips, 0);
     const avgBips = entries.length ? totalBips / entries.length : 0;
 
-    const ranked = entries.map(op => {
-      let level: 'OURO' | 'PRATA' | 'BRONZE' = 'PRATA';
-      if (op.bips >= avgBips * 1.2) level = 'OURO';
-      else if (op.bips < avgBips * 0.8) level = 'BRONZE';
+    const ranked = entries.map((op, index) => {
+      let level: 'OURO' | 'PRATA' | 'BRONZE' = 'BRONZE';
+      if (index < 2) level = 'OURO';
+      else if (index < 5) level = 'PRATA';
       
       return { ...op, level };
     }).sort((a, b) => b.bips - a.bips);
@@ -66,7 +74,66 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     return { ranked, avgBips, totalBips };
   }, [filteredData]);
 
-  const top20Operators = useMemo(() => operatorStats.ranked.slice(0, 20), [operatorStats.ranked]);
+  // Aggregate by station
+  const stationStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    filteredData.forEach(d => {
+      if (d.latest_station_name) {
+        stats[d.latest_station_name] = (stats[d.latest_station_name] || 0) + (d.qty_bips || 0);
+      }
+    });
+
+    return Object.entries(stats)
+      .map(([name, bips]) => ({ name, bips }))
+      .sort((a, b) => b.bips - a.bips);
+  }, [filteredData]);
+
+  // Tier List by Process & Station
+  const tierListByProcess = useMemo(() => {
+    const stats: Record<string, { totalBips: number, count: number, stations: Set<string> }> = {};
+    filteredData.forEach(d => {
+      const process = d.classificacao_processo || 'Outros';
+      if (!stats[process]) stats[process] = { totalBips: 0, count: 0, stations: new Set() };
+      stats[process].totalBips += (d.qty_bips || 0);
+      stats[process].count += 1;
+      if (d.latest_station_name) stats[process].stations.add(d.latest_station_name);
+    });
+
+    return Object.entries(stats)
+      .map(([name, data]) => ({
+        name,
+        avgBips: Number((data.totalBips / data.count).toFixed(1)),
+        totalBips: data.totalBips,
+        stationCount: data.stations.size,
+        topStation: Array.from(data.stations)[0] || 'N/A'
+      }))
+      .sort((a, b) => b.avgBips - a.avgBips);
+  }, [filteredData]);
+
+  const top10Operators = useMemo(() => operatorStats.ranked.slice(0, 10), [operatorStats.ranked]);
+  const topStations = useMemo(() => stationStats.slice(0, 5), [stationStats]);
+  const bottomStations = useMemo(() => [...stationStats].reverse().slice(0, 5).reverse(), [stationStats]);
+
+  // Hourly Average Stats
+  const hourlyStats = useMemo(() => {
+    const stats: Record<string, { total: number, count: number }> = {};
+    filteredData.forEach(d => {
+      if (d.hour) {
+        let h = d.hour.trim();
+        if (/^\d+$/.test(h)) h = `${h.padStart(2, '0')}:00`;
+        if (!stats[h]) stats[h] = { total: 0, count: 0 };
+        stats[h].total += (d.qty_bips || 0);
+        stats[h].count += 1;
+      }
+    });
+
+    return Object.entries(stats)
+      .map(([hour, data]) => ({
+        hour,
+        avgBips: Number((data.total / data.count).toFixed(1))
+      }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
+  }, [filteredData]);
 
   const performanceDistribution = useMemo(() => {
     const counts = { OURO: 0, PRATA: 0, BRONZE: 0 };
@@ -98,27 +165,46 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     // Find peak hour
     const hourCounts: Record<string, number> = {};
     filteredData.forEach(d => {
-      if (d.hour) hourCounts[d.hour] = (hourCounts[d.hour] || 0) + (d.qty_bips || 0);
+      if (d.hour) {
+        // Normalize hour string if it's just a number or has different format
+        let h = d.hour.trim();
+        if (/^\d+$/.test(h)) h = `${h.padStart(2, '0')}:00`;
+        hourCounts[h] = (hourCounts[h] || 0) + (d.qty_bips || 0);
+      }
     });
-    const peakHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '--:--';
+    const sortedHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
+    const peakHour = sortedHours[0]?.[0] || '--:--';
+    const secondPeakHour = sortedHours[1]?.[0];
 
     // Find main reason
     const reasonCounts: Record<string, number> = {};
     filteredData.forEach(d => {
       if (d.classificacao_reason) reasonCounts[d.classificacao_reason] = (reasonCounts[d.classificacao_reason] || 0) + 1;
     });
-    const mainReason = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+    const sortedReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+    const mainReason = sortedReasons[0]?.[0] || 'N/A';
+    const secondReason = sortedReasons[1]?.[0];
 
-    const trend = operatorStats.avgBips > 100 ? 'alta' : 'baixa'; // Arbitrary threshold for demo
+    // Station efficiency
+    const stationEfficiency = stationStats.length > 0 ? {
+      best: stationStats[0].name,
+      worst: stationStats[stationStats.length - 1].name,
+      gap: (stationStats[0].bips / (stationStats[stationStats.length - 1].bips || 1)).toFixed(1)
+    } : null;
+
+    const trend = operatorStats.avgBips > 100 ? 'alta' : 'baixa';
 
     return {
       topOp: topOp?.name || 'N/A',
       bottomOp: bottomOp?.name || 'N/A',
       peakHour,
+      secondPeakHour,
       mainReason,
+      secondReason,
+      stationEfficiency,
       trend
     };
-  }, [filteredData, operatorStats]);
+  }, [filteredData, operatorStats, stationStats]);
 
   // Filter Options
   const operatorOptions = useMemo(() => 
@@ -260,9 +346,9 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
           <CardHeader>
             <CardTitle>{t('prod.rankingTitle')}</CardTitle>
           </CardHeader>
-          <CardContent className="h-[500px]">
+          <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={top20Operators} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
+              <BarChart data={top10Operators} layout="vertical" margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} />
@@ -290,7 +376,7 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
                   }}
                 />
                 <Bar dataKey="bips" radius={[0, 4, 4, 0]}>
-                  {top20Operators.map((entry, index) => (
+                  {top10Operators.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={
@@ -348,10 +434,22 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
               {insights ? (
                 <div className="prose prose-invert max-w-none">
                   <p className="text-slate-300 leading-relaxed text-sm">
-                    Observa-se concentração produtiva no período das <span className="text-white font-bold">{insights.peakHour}</span>, 
+                    Observa-se concentração produtiva no período das <span className="text-white font-bold">{insights.peakHour}</span>
+                    {insights.secondPeakHour ? ` e ${insights.secondPeakHour}` : ''}, 
                     com destaque positivo para o operador <span className="text-[#F59E0B] font-bold">{insights.topOp}</span>. 
-                    Há incidência relevante do motivo <span className="text-indigo-400 font-bold">{insights.mainReason}</span> impactando o processo, 
-                    indicando oportunidade de melhoria operacional. 
+                    Há incidência relevante do motivo <span className="text-indigo-400 font-bold">{insights.mainReason}</span> 
+                    {insights.secondReason ? ` seguido de ${insights.secondReason}` : ''} impactando o processo.
+                  </p>
+                  
+                  {insights.stationEfficiency && (
+                    <p className="text-slate-300 leading-relaxed text-sm mt-2">
+                      A estação <span className="text-emerald-400 font-bold">{insights.stationEfficiency.best}</span> lidera em eficiência, 
+                      sendo <span className="text-white font-bold">{insights.stationEfficiency.gap}x</span> mais produtiva que a 
+                      estação <span className="text-red-400 font-bold">{insights.stationEfficiency.worst}</span>.
+                    </p>
+                  )}
+
+                  <p className="text-slate-300 leading-relaxed text-sm mt-2">
                     A tendência geral é de <span className={`font-bold ${insights.trend === 'alta' ? 'text-emerald-400' : 'text-red-400'}`}>{insights.trend} produtividade</span>.
                   </p>
                   
@@ -382,6 +480,118 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Top Stations Chart */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>{t('prod.topStationRankingTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={topStations}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={5}
+                  dataKey="bips"
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                >
+                  {topStations.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Tier List by Process */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('prod.tierListTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {tierListByProcess.map((tier, idx) => (
+                <div key={idx} className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
+                        idx === 0 ? 'bg-[#F59E0B]' : idx === 1 ? 'bg-[#9CA3AF]' : 'bg-[#B45309]'
+                      }`}>
+                        {idx === 0 ? 'S' : idx === 1 ? 'A' : 'B'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{tier.name}</p>
+                        <p className="text-xs text-slate-500">{tier.totalBips.toLocaleString()} BIPs totais</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-slate-900">{tier.avgBips}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Média BIPs</p>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[10px]">
+                    <span className="text-slate-500 uppercase font-bold">Estação Principal:</span>
+                    <span className="text-slate-900 font-medium">{tier.topStation}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bottom Stations Chart */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>{t('prod.bottomRankingTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={bottomStations}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={5}
+                  dataKey="bips"
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                >
+                  {bottomStations.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#EF4444', '#F87171', '#FCA5A5', '#FECACA', '#FEE2E2'][index % 5]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Hourly Histogram */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Média de BIPs por Horário</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourlyStats} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="hour" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="avgBips" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Média BIPs" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

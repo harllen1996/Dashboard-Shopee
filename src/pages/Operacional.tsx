@@ -29,6 +29,7 @@ export function Operacional({ data }: OperacionalProps) {
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
   const [activeKpi, setActiveKpi] = useState<KpiFilterType>(null);
+  const [onlyOver3Days, setOnlyOver3Days] = useState(false);
 
   const handleSort = (key: keyof ShipmentData) => {
     let direction: 'asc' | 'desc' | null = 'asc';
@@ -49,6 +50,10 @@ export function Operacional({ data }: OperacionalProps) {
         (!filters.since_drop_aging || item.since_drop_aging === filters.since_drop_aging)
       );
     });
+
+    if (onlyOver3Days) {
+      result = result.filter(item => item.days_open_in_station > 3);
+    }
 
     if (sortConfig.key && sortConfig.direction) {
       result = [...result].sort((a, b) => {
@@ -188,6 +193,18 @@ export function Operacional({ data }: OperacionalProps) {
             value={filters.since_drop_aging} 
             onChange={e => setFilters({ ...filters, since_drop_aging: e.target.value })} 
           />
+          <div className="flex items-center space-x-2 pt-6">
+            <input 
+              type="checkbox" 
+              id="over3days-op" 
+              checked={onlyOver3Days}
+              onChange={(e) => setOnlyOver3Days(e.target.checked)}
+              className="w-4 h-4 text-[#EE4D2D] border-slate-300 rounded focus:ring-[#EE4D2D]"
+            />
+            <label htmlFor="over3days-op" className="text-sm font-medium text-slate-700 cursor-pointer">
+              {t('rel.onlyOver3Days')}
+            </label>
+          </div>
         </CardContent>
       </Card>
 

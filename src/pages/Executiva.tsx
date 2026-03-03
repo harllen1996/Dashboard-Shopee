@@ -1,17 +1,53 @@
 import React, { useMemo, useState } from 'react';
 import { ShipmentData } from '@/src/hooks/useGoogleSheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/Card';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Line } from 'recharts';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { parseISO, format as formatDate, isValid } from 'date-fns';
+import { ptBR, enUS } from 'date-fns/locale';
 
 interface ExecutivaProps {
   data: ShipmentData[];
 }
 
 export function Executiva({ data }: ExecutivaProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [showAllSpxStatus, setShowAllSpxStatus] = useState(false);
+  
+  // MoM Data
+  const momData = useMemo(() => {
+    const months: Record<string, { volume: number, totalAging: number }> = {};
+    
+    data.forEach(item => {
+      const dateStr = item.latest_spx_datetime || item.current_datetime;
+      if (dateStr) {
+        let date = parseISO(dateStr);
+        if (!isValid(date)) {
+          const parts = dateStr.split(' ')[0].split('-');
+          if (parts.length === 3) {
+            date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          }
+        }
+
+        if (isValid(date)) {
+          const monthKey = formatDate(date, 'yyyy-MM');
+          if (!months[monthKey]) months[monthKey] = { volume: 0, totalAging: 0 };
+          months[monthKey].volume += 1;
+          months[monthKey].totalAging += item.days_open_since_rts;
+        }
+      }
+    });
+
+    return Object.entries(months)
+      .map(([month, stats]) => ({
+        month,
+        displayMonth: formatDate(parseISO(`${month}-01`), 'MMM/yy', { locale: language === 'pt' ? ptBR : enUS }),
+        volume: stats.volume,
+        avgAging: Number((stats.totalAging / stats.volume).toFixed(1))
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  }, [data, language]);
   
   // Computed Fields
   const totalShipments = data.length;
@@ -96,6 +132,7 @@ export function Executiva({ data }: ExecutivaProps) {
                   outerRadius={120}
                   paddingAngle={5}
                   dataKey="value"
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                 >
                   {agingDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -129,6 +166,29 @@ export function Executiva({ data }: ExecutivaProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* MoM Chart */}
+      {momData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('rel.momTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={momData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="displayMonth" />
+                <YAxis yAxisId="left" orientation="left" stroke="#EE4D2D" />
+                <YAxis yAxisId="right" orientation="right" stroke="#1e293b" />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="volume" name={t('rel.momVolume')} fill="#EE4D2D" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="avgAging" name={t('rel.momAging')} stroke="#1e293b" strokeWidth={3} dot={{ r: 6 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-white border-l-4 border-l-[#EE4D2D]">
         <CardContent className="p-6">
