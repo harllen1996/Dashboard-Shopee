@@ -88,9 +88,10 @@ const extractStationName = (row: any) => {
 
 const normalizeRow = (row: any) => {
   // Map common variations for numeric fields
-  const daysInStation = row.days_open_in_station || row.days_in_station || row.aging_station || 0;
-  const daysSinceRts = row.days_open_since_rts || row.days_since_rts || row.aging_rts || 0;
-  const daysStuck = row.days_stuck || row.stuck_days || 0;
+  const daysInStation = row.days_open_in_station || row.days_in_station || row.aging_station || row['Dias na Estação'] || row['Aging Estação'] || 0;
+  const daysSinceRts = row.days_open_since_rts || row.days_since_rts || row.aging_rts || row['Dias desde RTS'] || row['Aging RTS'] || 0;
+  const daysStuck = row.days_stuck || row.stuck_days || row['Dias Parado'] || 0;
+  const qtyBips = row.qty_bips || row.bips || row.quantidade || row.BIPs || row.Qty || 0;
 
   return {
     shipment_id: row.shipment_id || '',
@@ -107,11 +108,11 @@ const normalizeRow = (row: any) => {
     current_datetime: row.current_datetime || '',
     // Productivity fields (mapping common variations)
     operator: row.operator || row.operador || row.user || '',
-    qty_bips: normalizeNumeric(row.qty_bips || row.bips || row.quantidade),
-    classificacao_reason: row.classificacao_reason || row.motivo || row.reason || '',
-    classificacao_processo: row.classificacao_processo || row.processo || '',
-    hour: row.hour || row.hora || row.horario || row.faixa_horaria || '',
-    date: row.date || row.data || '',
+    qty_bips: normalizeNumeric(qtyBips),
+    classificacao_reason: row.classificacao_reason || row.motivo || row.reason || row.Motivo || '',
+    classificacao_processo: row.classificacao_processo || row.processo || row.Processo || '',
+    hour: row.hour || row.hora || row.horario || row.faixa_horaria || row.Hora || '',
+    date: row.date || row.data || row.Data || row.Date || '',
   };
 };
 

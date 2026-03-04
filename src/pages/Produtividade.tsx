@@ -19,6 +19,7 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
   const [filters, setFilters] = useState({
     operator: '',
     classificacao_reason: '',
+    date: '',
   });
 
   const COLORS = ["#EE4D2D", "#FF7A59", "#FFB199", "#FFD3C4", "#FFEDEB", "#0F172A", "#334155", "#64748B", "#94A3B8", "#CBD5E1"];
@@ -45,7 +46,8 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     return productivityData.filter(item => {
       return (
         (!filters.operator || item.operator === filters.operator) &&
-        (!filters.classificacao_reason || item.classificacao_reason === filters.classificacao_reason)
+        (!filters.classificacao_reason || item.classificacao_reason === filters.classificacao_reason) &&
+        (!filters.date || item.date === filters.date)
       );
     });
   }, [productivityData, filters]);
@@ -63,13 +65,15 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     const totalBips = entries.reduce((acc, curr) => acc + curr.bips, 0);
     const avgBips = entries.length ? totalBips / entries.length : 0;
 
-    const ranked = entries.map((op, index) => {
-      let level: 'OURO' | 'PRATA' | 'BRONZE' = 'BRONZE';
-      if (index < 2) level = 'OURO';
-      else if (index < 5) level = 'PRATA';
-      
-      return { ...op, level };
-    }).sort((a, b) => b.bips - a.bips);
+    const ranked = entries
+      .sort((a, b) => b.bips - a.bips)
+      .map((op, index) => {
+        let level: 'OURO' | 'PRATA' | 'BRONZE' = 'BRONZE';
+        if (index < 2) level = 'OURO';
+        else if (index < 5) level = 'PRATA';
+        
+        return { ...op, level };
+      });
 
     return { ranked, avgBips, totalBips };
   }, [filteredData]);
@@ -114,25 +118,24 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
   const topStations = useMemo(() => stationStats.slice(0, 5), [stationStats]);
   const bottomStations = useMemo(() => [...stationStats].reverse().slice(0, 5).reverse(), [stationStats]);
 
-  // Hourly Average Stats
-  const hourlyStats = useMemo(() => {
+  // Daily Average Stats
+  const dailyStats = useMemo(() => {
     const stats: Record<string, { total: number, count: number }> = {};
     filteredData.forEach(d => {
-      if (d.hour) {
-        let h = d.hour.trim();
-        if (/^\d+$/.test(h)) h = `${h.padStart(2, '0')}:00`;
-        if (!stats[h]) stats[h] = { total: 0, count: 0 };
-        stats[h].total += (d.qty_bips || 0);
-        stats[h].count += 1;
+      if (d.date) {
+        const date = d.date;
+        if (!stats[date]) stats[date] = { total: 0, count: 0 };
+        stats[date].total += (d.qty_bips || 0);
+        stats[date].count += 1;
       }
     });
 
     return Object.entries(stats)
-      .map(([hour, data]) => ({
-        hour,
+      .map(([date, data]) => ({
+        date,
         avgBips: Number((data.total / data.count).toFixed(1))
       }))
-      .sort((a, b) => a.hour.localeCompare(b.hour));
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
   const performanceDistribution = useMemo(() => {
@@ -172,10 +175,6 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
         hourCounts[h] = (hourCounts[h] || 0) + (d.qty_bips || 0);
       }
     });
-    const sortedHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
-    const peakHour = sortedHours[0]?.[0] || '--:--';
-    const secondPeakHour = sortedHours[1]?.[0];
-
     // Find main reason
     const reasonCounts: Record<string, number> = {};
     filteredData.forEach(d => {
@@ -197,8 +196,6 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
     return {
       topOp: topOp?.name || 'N/A',
       bottomOp: bottomOp?.name || 'N/A',
-      peakHour,
-      secondPeakHour,
       mainReason,
       secondReason,
       stationEfficiency,
@@ -214,6 +211,11 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
   
   const reasonOptions = useMemo(() => 
     Array.from(new Set(productivityData.map(d => d.classificacao_reason))).filter(Boolean).sort().map(v => ({ label: v!, value: v! })), 
+    [productivityData]
+  );
+
+  const dateOptions = useMemo(() => 
+    Array.from(new Set(productivityData.map(d => d.date))).filter(Boolean).sort().map(v => ({ label: v!, value: v! })), 
     [productivityData]
   );
 
@@ -281,7 +283,7 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Select 
             label={t('prod.filterOperator')} 
             options={operatorOptions} 
@@ -293,6 +295,12 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
             options={reasonOptions} 
             value={filters.classificacao_reason} 
             onChange={e => setFilters({ ...filters, classificacao_reason: e.target.value })} 
+          />
+          <Select 
+            label="Filtrar por Data" 
+            options={dateOptions} 
+            value={filters.date} 
+            onChange={e => setFilters({ ...filters, date: e.target.value })} 
           />
         </CardContent>
       </Card>
@@ -434,9 +442,7 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
               {insights ? (
                 <div className="prose prose-invert max-w-none">
                   <p className="text-slate-300 leading-relaxed text-sm">
-                    Observa-se concentração produtiva no período das <span className="text-white font-bold">{insights.peakHour}</span>
-                    {insights.secondPeakHour ? ` e ${insights.secondPeakHour}` : ''}, 
-                    com destaque positivo para o operador <span className="text-[#F59E0B] font-bold">{insights.topOp}</span>. 
+                    Observa-se destaque positivo para o operador <span className="text-[#F59E0B] font-bold">{insights.topOp}</span>. 
                     Há incidência relevante do motivo <span className="text-indigo-400 font-bold">{insights.mainReason}</span> 
                     {insights.secondReason ? ` seguido de ${insights.secondReason}` : ''} impactando o processo.
                   </p>
@@ -461,15 +467,6 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase font-bold">Top Performer</p>
                         <p className="text-xs font-medium truncate w-24">{insights.topOp}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="p-1.5 bg-indigo-500/20 rounded">
-                        <Clock className="w-4 h-4 text-indigo-400" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Pico Horário</p>
-                        <p className="text-xs font-medium">{insights.peakHour}</p>
                       </div>
                     </div>
                   </div>
@@ -575,16 +572,16 @@ export function Produtividade({ data, onFileUpload }: ProdutividadeProps) {
           </CardContent>
         </Card>
 
-        {/* Hourly Histogram */}
+        {/* Daily Histogram */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Média de BIPs por Horário</CardTitle>
+            <CardTitle>Média de BIPs por Data</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyStats} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={dailyStats} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="hour" />
+                <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="avgBips" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Média BIPs" />

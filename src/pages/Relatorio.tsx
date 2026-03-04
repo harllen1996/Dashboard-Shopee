@@ -99,7 +99,8 @@ export function Relatorio({ data }: RelatorioProps) {
       result = result.filter(item => selectedStations.includes(item.latest_station_name?.trim()));
     }
     if (onlyOver3Days) {
-      result = result.filter(item => item.days_open_in_station > 3);
+      // Use a more robust check for > 3 days
+      result = result.filter(item => Number(item.days_open_in_station) > 3);
     }
     return result;
   }, [data, selectedStations, onlyOver3Days]);

@@ -52,7 +52,7 @@ export function Operacional({ data }: OperacionalProps) {
     });
 
     if (onlyOver3Days) {
-      result = result.filter(item => item.days_open_in_station > 3);
+      result = result.filter(item => Number(item.days_open_in_station) > 3);
     }
 
     if (sortConfig.key && sortConfig.direction) {
